@@ -1,46 +1,33 @@
 package com.example.demoalarmclock;
 
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.databinding.DataBindingUtil;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.TimePicker;
-import android.widget.Toast;
 
 import com.example.demoalarmclock.adapter.DateAdapter;
 import com.example.demoalarmclock.adapter.NumberAdapter;
 import com.example.demoalarmclock.broadcast.AlarmBroadcast;
-import com.example.demoalarmclock.databinding.ActivityMainBinding;
+import com.example.demoalarmclock.database.TimerDatabase;
 import com.example.demoalarmclock.listener.Onclick;
 import com.example.demoalarmclock.model.Date;
 import com.example.demoalarmclock.model.Number;
-import com.example.demoalarmclock.service.AlarmService;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
 public class AlarmActivity extends AppCompatActivity implements Onclick, View.OnClickListener {
-    private RecyclerView recyclerView, recyclerView1;
+    private RecyclerView rvDate, rvNumber;
     private DateAdapter dateAdapter;
     private NumberAdapter numberAdapter;
     private List<Date> list;
@@ -58,6 +45,7 @@ public class AlarmActivity extends AppCompatActivity implements Onclick, View.On
     private String amOrPm ="";
     private AlarmBroadcast alarmBroadcast;
     private List<Integer> listDayOfWeek = new ArrayList<>();
+    private TimerDatabase database;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +54,9 @@ public class AlarmActivity extends AppCompatActivity implements Onclick, View.On
         IntentFilter intentFilter = new IntentFilter(START_ALARM);
         alarmBroadcast = new AlarmBroadcast();
         registerReceiver(alarmBroadcast,intentFilter);
-        init();
+        database = new TimerDatabase(this,"Timer.sqlite",null,1);
+        database.query("CREATE TABLE IF NOT EXISTS time(id INTEGER PRIMARY KEY AUTOINCREMENT, hour INTEGER, minute INTEGER, Am_Pm VARCHAR(200))");
+        initView();
     }
 
     @Override
@@ -75,7 +65,7 @@ public class AlarmActivity extends AppCompatActivity implements Onclick, View.On
         super.onDestroy();
     }
 
-    private void init() {
+    private void initView() {
         list = new ArrayList<>();
         addList();
         calendar = Calendar.getInstance();
@@ -98,15 +88,15 @@ public class AlarmActivity extends AppCompatActivity implements Onclick, View.On
         btnCancel.setOnClickListener(this);
         btnAmPm.setOnClickListener(this);
         dateAdapter = new DateAdapter(list, this, this);
-        recyclerView = findViewById(R.id.rv_date);
-        recyclerView.setLayoutManager(new GridLayoutManager(this, 7));
-        recyclerView.setAdapter(dateAdapter);
-        recyclerView1 = findViewById(R.id.rv_number);
+        rvDate = findViewById(R.id.rv_date);
+        rvDate.setLayoutManager(new GridLayoutManager(this, 7));
+        rvDate.setAdapter(dateAdapter);
+        rvNumber = findViewById(R.id.rv_number);
         listNumbers = new ArrayList<>();
         addListNumber();
         numberAdapter = new NumberAdapter(listNumbers, this, this);
-        recyclerView1.setLayoutManager(new GridLayoutManager(this, 3));
-        recyclerView1.setAdapter(numberAdapter);
+        rvNumber.setLayoutManager(new GridLayoutManager(this, 3));
+        rvNumber.setAdapter(numberAdapter);
 
     }
 
@@ -256,6 +246,7 @@ public class AlarmActivity extends AppCompatActivity implements Onclick, View.On
     }
 
     private void saveTimer() {
+        database.query("INSERT INTO time VALUES(null, "+hour+", "+minute+", '"+amOrPm+"')");
         amOrPm= btnAmPm.getText().toString();
         Intent intent = new Intent(START_ALARM);
         if (amOrPm.equals("AM")) {
@@ -264,9 +255,8 @@ public class AlarmActivity extends AppCompatActivity implements Onclick, View.On
         calendar.set(Calendar.MINUTE, minute);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this,0,intent,PendingIntent.FLAG_UPDATE_CURRENT);
         alarmManager.set(AlarmManager.RTC_WAKEUP,calendar.getTimeInMillis(),pendingIntent);
-//        Intent intent1 = new Intent(AlarmActivity.this,ListAlarmActivity.class);
-//        startActivity(intent1);
+        Intent intent1 = new Intent(AlarmActivity.this,ListAlarmActivity.class);
+        startActivity(intent1);
     }
-
 }
 

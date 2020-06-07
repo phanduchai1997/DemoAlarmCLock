@@ -1,5 +1,7 @@
 package com.example.demoalarmclock;
 
+import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
 import android.widget.Toast;
 
@@ -9,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.demoalarmclock.adapter.TimeItemAdapter;
+import com.example.demoalarmclock.database.TimerDatabase;
 import com.example.demoalarmclock.listener.OnItemTimeClick;
 import com.example.demoalarmclock.model.Timer;
 
@@ -23,10 +26,12 @@ public class ListAlarmActivity extends AppCompatActivity implements OnItemTimeCl
     private List<Timer> timerList;
     private RecyclerView recyclerView;
     private TimeItemAdapter itemAdapter;
+    TimerDatabase database;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.layout_list_alarm);
+        database = new TimerDatabase(this,"Timer.sqlite",null,1);
         timerList = new ArrayList<>();
         addTimer();
         itemAdapter = new TimeItemAdapter(this, timerList,this);
@@ -35,38 +40,19 @@ public class ListAlarmActivity extends AppCompatActivity implements OnItemTimeCl
         layoutManager.setOrientation(RecyclerView.VERTICAL);
         recyclerView.setLayoutManager(layoutManager);
         recyclerView.setAdapter(itemAdapter);
+
+
     }
 
     private void addTimer() {
-        File file = new File("data/data/com.example.demoalarmclock/time.txt");
-        String time = "";
-        if(!file.exists()){
-            Toast.makeText(this,"No Data",Toast.LENGTH_SHORT).show();
-            return;
-        }
-        try {
-            FileInputStream inputStream = new FileInputStream(file);
-            int len;
-            byte buff[] = new byte[1024];
-            while ((len = inputStream.read(buff))>0){
-                time += new String(buff,0,len);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String listTime[] = time.split("\n");
-        for (int i=0;i<listTime.length;i++){
-            String listInf[] = listTime[i].split(":");
-            String time1=listInf[0]+":"+listInf[1]+"("+listInf[2]+")";
-                timerList.add(new Timer(time1));
+        Cursor timer = database.getData("SELECT * FROM time");
+        while (timer.moveToNext()){
+            timerList.add(new Timer(timer.getInt(1)+":"+(timer.getInt(2))+"("+timer.getString(3)+")"));
         }
     }
 
     @Override
     public void onFixCLick(int posision) {
-
     }
 
     @Override
